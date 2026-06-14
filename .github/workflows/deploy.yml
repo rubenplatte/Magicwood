@@ -23,6 +23,12 @@ jobs:
         with:
           node-version: 20
           cache: npm
+      # Enables GitHub Pages for the repo (with "GitHub Actions" as the source)
+      # if it isn't already, so no manual settings toggle is required.
+      - id: pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
       - run: npm ci
       # Build for project-pages sub-path (https://<user>.github.io/<repo>/).
       - run: npm run build
