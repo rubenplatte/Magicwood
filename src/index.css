@@ -85,3 +85,29 @@ input[type='range']::-moz-range-track {
 .leaflet-popup-content {
   margin: 10px 12px;
 }
+
+/* Sector name labels on the map */
+.leaflet-tooltip.mw-label {
+  background: rgba(15, 23, 42, 0.92);
+  color: #e2e8f0;
+  border: none;
+  border-radius: 8px;
+  padding: 3px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  white-space: nowrap;
+}
+.leaflet-tooltip.mw-label::before {
+  display: none;
+}
+
+/* Hide the default attribution prefix flag for a cleaner look */
+.leaflet-control-attribution {
+  background: rgba(15, 23, 42, 0.7) !important;
+  color: #94a3b8 !important;
+  font-size: 10px;
+}
+.leaflet-control-attribution a {
+  color: #cbd5e1 !important;
+}

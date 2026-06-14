@@ -40,16 +40,19 @@ export default function App() {
         {tab === 'lists' && <ListsScreen />}
       </main>
 
-      <nav className="shrink-0 grid grid-cols-3 border-t border-slate-800 bg-slate-900 safe-bottom">
+      <nav
+        className="shrink-0 grid grid-cols-3 border-t border-slate-800 bg-slate-900"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      >
         {TABS.map(({ key, label, icon: Icon }) => (
           <button
             key={key}
             onClick={() => setTab(key)}
-            className={`flex flex-col items-center gap-0.5 py-2.5 text-xs font-medium ${
+            className={`flex flex-col items-center gap-0.5 pt-1.5 pb-1 text-[11px] font-medium ${
               tab === key ? 'text-moss-300' : 'text-slate-500'
             }`}
           >
-            <Icon size={22} className={tab === key ? 'fill-moss-300/15' : ''} />
+            <Icon size={21} className={tab === key ? 'fill-moss-300/15' : ''} />
             {label}
           </button>
         ))}

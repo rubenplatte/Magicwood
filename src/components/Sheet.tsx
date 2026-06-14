@@ -25,7 +25,7 @@ export function Sheet({ open, onClose, title, children, footer }: SheetProps) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col justify-end">
+    <div className="fixed inset-0 z-[2000] flex flex-col justify-end">
       <div
         className="absolute inset-0 bg-black/60 animate-[fadeIn_0.15s_ease]"
         onClick={onClose}

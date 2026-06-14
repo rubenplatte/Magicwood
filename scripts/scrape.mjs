@@ -23,6 +23,8 @@ const DATA_DIR = resolve(__dirname, '../src/data');
 const ROUTELIST_URL = 'https://27crags.com/crags/magic-wood/routelist';
 const CRAGMAP_URL = 'https://27crags.com/crags/magic-wood/cragmap';
 const CRAG_URL = 'https://27crags.com/crags/magic-wood';
+const PHOTO_URL = (id) => `https://27crags.com/photos/${id}`;
+const PHOTO_CONCURRENCY = 12;
 
 const UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 ' +
@@ -119,6 +121,52 @@ function parseRoutes(html) {
   return routes;
 }
 
+// The routelist only exposes the 80px "small" thumbnail. The full-resolution
+// image (size_xl, ~1520px) lives at a different, content-hashed URL that we can
+// only discover from each photo's page. Resolve them in a small concurrency
+// pool so the detail view and map popups can show a proper photo.
+function photoIdFromThumb(thumb) {
+  const m = thumb && thumb.match(/\/photos\/\d{3}\/\d{3}\/(\d+)\//);
+  return m ? m[1] : null;
+}
+
+async function resolveHighResImages(routes) {
+  const ids = [...new Set(routes.map((r) => photoIdFromThumb(r.thumb)).filter(Boolean))];
+  console.log(`  resolving high-res images for ${ids.length} unique photos…`);
+  const xlById = new Map();
+  let done = 0;
+
+  async function worker(queue) {
+    for (const id of queue) {
+      try {
+        const html = await fetchText(PHOTO_URL(id));
+        const m = html.match(
+          /https:\/\/storage\.e5gc6\.upcloudobjects\.com\/photos\/[^"']*size_xl-[a-f0-9]+\.(?:jpg|jpeg|png)/i
+        );
+        if (m) xlById.set(id, m[0]);
+      } catch {
+        /* leave unresolved; falls back to the thumbnail */
+      }
+      done++;
+      if (done % 100 === 0) console.log(`    ${done}/${ids.length}`);
+    }
+  }
+
+  // Split ids round-robin into PHOTO_CONCURRENCY queues.
+  const queues = Array.from({ length: PHOTO_CONCURRENCY }, () => []);
+  ids.forEach((id, i) => queues[i % PHOTO_CONCURRENCY].push(id));
+  await Promise.all(queues.map(worker));
+
+  let resolved = 0;
+  for (const r of routes) {
+    const id = photoIdFromThumb(r.thumb);
+    const xl = id ? xlById.get(id) : null;
+    r.image = xl || r.thumb || null;
+    if (xl) resolved++;
+  }
+  console.log(`  resolved ${resolved}/${routes.length} high-res images`);
+}
+
 async function main() {
   console.log('Fetching cragmap (sector GPS)…');
   const cragmapHtml = await fetchText(CRAGMAP_URL);
@@ -144,6 +192,8 @@ async function main() {
     }
   }
   console.log(`  ${withGps}/${routes.length} boulders have GPS via sector`);
+
+  await resolveHighResImages(routes);
 
   // Only keep sectors that actually contain boulders, for the map.
   const usedSlugs = new Set(routes.map((r) => r.sectorSlug).filter(Boolean));

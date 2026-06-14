@@ -10,6 +10,7 @@ export interface Boulder {
   sectorSlug: string | null;
   sector: string | null;
   thumb: string | null;
+  image: string | null; // high-res (size_xl) when available, else same as thumb
   hasVideo: boolean;
   url: string;
   lat: number | null;

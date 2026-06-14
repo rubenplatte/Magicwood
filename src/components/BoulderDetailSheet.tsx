@@ -19,11 +19,12 @@ export function BoulderDetailSheet() {
 
   return (
     <Sheet open={!!slug} onClose={close} title={boulder.name}>
-      {boulder.thumb && (
+      {boulder.image && (
         <img
-          src={boulder.thumb}
-          alt=""
-          className="w-full h-44 object-cover rounded-xl mb-3 bg-slate-800"
+          src={boulder.image}
+          alt={boulder.name}
+          decoding="async"
+          className="w-full max-h-72 object-cover rounded-xl mb-3 bg-slate-800"
         />
       )}
 
