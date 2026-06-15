@@ -4,7 +4,7 @@ import { tilesForBounds, type Bounds } from './tiles';
 const TILE_CACHE = 'mw-tiles';
 const PHOTO_CACHE = 'mw-photos';
 const OFFLINE_MIN_ZOOM = 13;
-const OFFLINE_MAX_ZOOM = 18;
+const OFFLINE_MAX_ZOOM = 19;
 
 // Bounding box around all sectors, padded slightly so the edges aren't bare.
 function cragBounds(): Bounds {
@@ -23,6 +23,23 @@ function cragBounds(): Bounds {
 // caching them makes the whole catalogue browsable offline for a few MB.
 function thumbUrls(): string[] {
   return [...new Set(boulders.map((b) => b.thumb).filter((u): u is string => !!u))];
+}
+
+// Full-size (size_xl) photos shown in the detail view — deduped, and only the
+// genuine high-res ones (some boulders fall back to the thumbnail).
+function highResUrls(): string[] {
+  return [
+    ...new Set(
+      boulders
+        .map((b) => b.image)
+        .filter((u): u is string => !!u && /size_xl/.test(u))
+    ),
+  ];
+}
+
+export function highResPlan(): { urls: string[]; estMb: number } {
+  const urls = highResUrls();
+  return { urls, estMb: Math.max(1, Math.round((urls.length * 230) / 1024)) };
 }
 
 export function offlineUrlPlan(): { tiles: string[]; photos: string[] } {
@@ -78,6 +95,12 @@ export async function downloadOffline(onProgress: (p: DownloadProgress) => void)
   onProgress({ done: 0, total, phase: 'tiles' });
   await cacheAll(TILE_CACHE, tiles, 'tiles', 0, total, onProgress);
   await cacheAll(PHOTO_CACHE, photos, 'photos', tiles.length, total, onProgress);
+}
+
+export async function downloadHighResPhotos(onProgress: (p: DownloadProgress) => void) {
+  const urls = highResUrls();
+  onProgress({ done: 0, total: urls.length, phase: 'photos' });
+  await cacheAll(PHOTO_CACHE, urls, 'photos', 0, urls.length, onProgress);
 }
 
 export async function offlineCachedCount(): Promise<number> {

@@ -49,12 +49,18 @@ await page.getByRole('button', { name: 'Show my location' }).click();
 await shot('4-map-located', 2000);
 
 // Zoom in via mouse wheel to trigger permanent sector labels
-await page.mouse.move(195, 300);
-for (let i = 0; i < 3; i++) {
-  await page.mouse.wheel(0, -600);
-  await page.waitForTimeout(500);
-}
+// Position precisely on a populated cluster at deep zoom to check labels.
+await page.evaluate(() => {
+  const m = window.__mwmap;
+  if (m) m.setView([46.5638, 9.4373], 20);
+});
 await shot('5-map-zoomed', 1800);
+// And a mid zoom over the dense core to confirm it stays uncluttered.
+await page.evaluate(() => {
+  const m = window.__mwmap;
+  if (m) m.setView([46.5638, 9.4373], 16);
+});
+await shot('5b-map-core', 1500);
 
 // Satellite toggle (exact label to avoid matching the nav "Map" tab)
 await page.getByRole('button', { name: 'Satellite', exact: true }).click();
