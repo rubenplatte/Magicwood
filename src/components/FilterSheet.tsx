@@ -25,6 +25,7 @@ const SAVED_TOGGLES: { key: 'savedOnly' | 'likedOnly' | 'projectsOnly' | 'ticked
 export function FilterSheet() {
   const open = useUI((s) => s.filterOpen);
   const setOpen = useUI((s) => s.setFilterOpen);
+  const tab = useUI((s) => s.tab);
   const filters = useFilters((s) => s.filters);
   const set = useFilters((s) => s.set);
   const reset = useFilters((s) => s.reset);
@@ -71,6 +72,25 @@ export function FilterSheet() {
         </div>
       }
     >
+      {/* Sort — only relevant in the Explore list, not the map */}
+      {tab === 'explore' && (
+        <Section title="Sort by">
+          <div className="flex items-center gap-2 flex-wrap">
+            {SORTS.map((s) => (
+              <button
+                key={s.key}
+                onClick={() => set({ sort: s.key })}
+                className={`px-3 py-1.5 rounded-full text-sm ${
+                  filters.sort === s.key ? 'bg-moss-500 text-white' : 'bg-slate-800 text-slate-300'
+                }`}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+        </Section>
+      )}
+
       {/* Grade range */}
       <Section title="Grade">
         <div className="flex justify-between text-sm font-semibold text-moss-200 mb-1">
@@ -150,7 +170,7 @@ export function FilterSheet() {
         </div>
       </Section>
 
-      {/* Saved-state quick filters */}
+      {/* Saved-state quick filters + content toggles, all inline */}
       <Section title="My boulders">
         <div className="flex items-center gap-2 flex-wrap">
           {SAVED_TOGGLES.map((t) => (
@@ -164,31 +184,14 @@ export function FilterSheet() {
               {t.label}
             </button>
           ))}
-        </div>
-        <button
-          onClick={() => set({ withVideo: !filters.withVideo })}
-          className={`mt-2 px-3 py-1.5 rounded-full text-sm ${
-            filters.withVideo ? 'bg-moss-500 text-white' : 'bg-slate-800 text-slate-300'
-          }`}
-        >
-          Has video beta
-        </button>
-      </Section>
-
-      {/* Sort */}
-      <Section title="Sort by">
-        <div className="flex items-center gap-2 flex-wrap">
-          {SORTS.map((s) => (
-            <button
-              key={s.key}
-              onClick={() => set({ sort: s.key })}
-              className={`px-3 py-1.5 rounded-full text-sm ${
-                filters.sort === s.key ? 'bg-moss-500 text-white' : 'bg-slate-800 text-slate-300'
-              }`}
-            >
-              {s.label}
-            </button>
-          ))}
+          <button
+            onClick={() => set({ withVideo: !filters.withVideo })}
+            className={`px-3 py-1.5 rounded-full text-sm ${
+              filters.withVideo ? 'bg-moss-500 text-white' : 'bg-slate-800 text-slate-300'
+            }`}
+          >
+            Has video beta
+          </button>
         </div>
       </Section>
     </Sheet>

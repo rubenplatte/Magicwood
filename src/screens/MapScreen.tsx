@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   MapContainer,
   TileLayer,
@@ -19,35 +19,13 @@ import { Sheet } from '../components/Sheet';
 import { BoulderCard } from '../components/BoulderCard';
 import type { Boulder, Sector } from '../lib/types';
 
-// Magic Wood is dense, so labels are shown adaptively: only once few enough
-// rocks are actually in the viewport (i.e. you've zoomed into a small area),
-// never just at a fixed zoom. This keeps the dense core uncluttered.
-const LABEL_MAX_IN_VIEW = 18;
+// Sector names appear only at the deepest zoom (where you're looking at a
+// small area). Tying this to zoom alone — not the live in-view count — keeps it
+// stable while panning, so labels don't flicker on/off as you move the map.
+const LABEL_ZOOM = 20;
 
-interface MapView {
-  visible: number; // sector markers currently within the viewport
-  zoom: number;
-}
-
-function ViewTracker({
-  points,
-  onChange,
-}: {
-  points: { sector: Sector }[];
-  onChange: (v: MapView) => void;
-}) {
-  const map = useMap();
-  const report = useCallback(() => {
-    const b = map.getBounds();
-    let visible = 0;
-    for (const p of points) {
-      if (b.contains([p.sector.lat, p.sector.lng])) visible++;
-    }
-    onChange({ visible, zoom: map.getZoom() });
-  }, [map, points, onChange]);
-
-  useMapEvents({ moveend: report, zoomend: report });
-  useEffect(report, [report]);
+function ZoomTracker({ onZoom }: { onZoom: (z: number) => void }) {
+  const map = useMapEvents({ zoomend: () => onZoom(map.getZoom()) });
   // Expose the map for debugging / screenshot tooling.
   useEffect(() => {
     (window as unknown as { __mwmap?: unknown }).__mwmap = map;
@@ -115,7 +93,7 @@ export function MapScreen() {
   const filters = useFilters((s) => s.filters);
   const activeCount = countActiveFilters(filters, minGradeNum, maxGradeNum);
   const [selected, setSelected] = useState<Sector | null>(null);
-  const [view, setView] = useState<MapView>({ visible: Infinity, zoom: crag.zoom });
+  const [zoom, setZoom] = useState(crag.zoom);
   const [layer, setLayer] = useState<LayerKey>('map');
   const [userPos, setUserPos] = useState<UserPos | null>(null);
 
@@ -138,9 +116,7 @@ export function MapScreen() {
     [bySector]
   );
 
-  // Show names once you've zoomed into a small enough area, plus a sensible
-  // zoom floor so a sparsely-populated corner at low zoom doesn't label.
-  const showLabels = view.zoom >= 16 && view.visible > 0 && view.visible <= LABEL_MAX_IN_VIEW;
+  const showLabels = zoom >= LABEL_ZOOM;
   const selectedBoulders = selected ? bySector.get(selected.slug) ?? [] : [];
   const tiles = LAYERS[layer];
 
@@ -162,7 +138,7 @@ export function MapScreen() {
           maxZoom={20}
           maxNativeZoom={19}
         />
-        <ViewTracker points={points} onChange={setView} />
+        <ZoomTracker onZoom={setZoom} />
         <LocateControl onPos={setUserPos} />
 
         {points.map(({ sector, count }) => {

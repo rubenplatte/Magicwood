@@ -85,8 +85,6 @@ export function ListsScreen() {
           ))}
         </section>
 
-        <OfflineCard />
-
         {/* Custom lists */}
         <section>
           <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wide mb-2">
@@ -178,6 +176,9 @@ export function ListsScreen() {
             </button>
           </div>
         </section>
+
+        {/* Extra feature, kept at the very bottom */}
+        <OfflineCard />
 
         <p className="text-xs text-slate-600 pt-2">
           {boulders.length} boulders · everything is saved on this device.

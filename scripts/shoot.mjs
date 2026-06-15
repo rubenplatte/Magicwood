@@ -34,6 +34,12 @@ async function shot(name, ms = 600) {
 await page.goto(BASE, { waitUntil: 'networkidle' });
 await shot('1-explore');
 
+// Filters on the Explore tab (sort should be at the top here)
+await page.getByRole('button', { name: 'Filters' }).click();
+await shot('1b-filters-explore', 600);
+await page.keyboard.press('Escape');
+await page.waitForTimeout(300);
+
 // Open a boulder detail
 await page.locator('h3').first().click();
 await shot('2-detail');

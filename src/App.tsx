@@ -44,19 +44,19 @@ export default function App() {
 
       <nav
         className="shrink-0 grid grid-cols-3 border-t border-slate-800 bg-slate-900"
-        // Clear the home indicator but don't stack its full inset on top of the
-        // button padding — that's what made the installed nav feel oversized.
-        style={{ paddingBottom: 'max(0.2rem, calc(env(safe-area-inset-bottom) - 0.6rem))' }}
+        // Only add a small slice of the home-indicator inset — stacking its full
+        // height on top of the buttons is what made the installed nav oversized.
+        style={{ paddingBottom: 'max(0.15rem, calc(env(safe-area-inset-bottom) - 1.15rem))' }}
       >
         {TABS.map(({ key, label, icon: Icon }) => (
           <button
             key={key}
             onClick={() => setTab(key)}
-            className={`flex flex-col items-center gap-0.5 pt-1.5 pb-0.5 text-[10px] font-medium ${
+            className={`flex flex-col items-center gap-0.5 pt-1 pb-0.5 text-[10px] font-medium ${
               tab === key ? 'text-moss-300' : 'text-slate-500'
             }`}
           >
-            <Icon size={20} className={tab === key ? 'fill-moss-300/15' : ''} />
+            <Icon size={19} className={tab === key ? 'fill-moss-300/15' : ''} />
             {label}
           </button>
         ))}
