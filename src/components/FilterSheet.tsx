@@ -3,12 +3,7 @@ import { Sheet } from './Sheet';
 import { useFilters } from '../store/useFilters';
 import { useUI } from '../store/useUI';
 import { Stars } from './Stars';
-import {
-  gradeScale,
-  minGradeNum,
-  maxGradeNum,
-  sectorsByCount,
-} from '../lib/data';
+import { gradeScale, minGradeNum, maxGradeNum } from '../lib/data';
 import type { SortKey } from '../lib/filter';
 
 const SORTS: { key: SortKey; label: string }[] = [
@@ -32,7 +27,6 @@ export function FilterSheet() {
   const setOpen = useUI((s) => s.setFilterOpen);
   const filters = useFilters((s) => s.filters);
   const set = useFilters((s) => s.set);
-  const toggleSector = useFilters((s) => s.toggleSector);
   const reset = useFilters((s) => s.reset);
 
   const minIdx = useMemo(
@@ -83,22 +77,32 @@ export function FilterSheet() {
           <span>{gradeScale[minIdx]?.grade}</span>
           <span>{gradeScale[maxIdx]?.grade}</span>
         </div>
-        <div className="relative h-8">
+        <div className="dual-range">
+          <div className="rail" />
+          <div
+            className="fill"
+            style={{
+              left: `${(minIdx / lastIdx) * 100}%`,
+              right: `${100 - (maxIdx / lastIdx) * 100}%`,
+            }}
+          />
           <input
             type="range"
             min={0}
             max={lastIdx}
             value={minIdx}
+            aria-label="Minimum grade"
             onChange={(e) => setMinIdx(+e.target.value)}
-            className="absolute w-full top-2"
+            style={{ zIndex: 4 }}
           />
           <input
             type="range"
             min={0}
             max={lastIdx}
             value={maxIdx}
+            aria-label="Maximum grade"
             onChange={(e) => setMaxIdx(+e.target.value)}
-            className="absolute w-full top-2"
+            style={{ zIndex: 3 }}
           />
         </div>
         {(filters.minGrade > minGradeNum || filters.maxGrade < maxGradeNum) && (
@@ -185,35 +189,6 @@ export function FilterSheet() {
               {s.label}
             </button>
           ))}
-        </div>
-      </Section>
-
-      {/* Sectors */}
-      <Section title={`Sectors${filters.sectors.length ? ` (${filters.sectors.length})` : ''}`}>
-        {filters.sectors.length > 0 && (
-          <button
-            onClick={() => set({ sectors: [] })}
-            className="mb-2 text-xs text-moss-300 underline"
-          >
-            Clear sectors
-          </button>
-        )}
-        <div className="grid grid-cols-2 gap-2 max-h-72 overflow-y-auto pr-1">
-          {sectorsByCount.map((sec) => {
-            const active = filters.sectors.includes(sec.slug);
-            return (
-              <button
-                key={sec.slug}
-                onClick={() => toggleSector(sec.slug)}
-                className={`flex items-center justify-between gap-1 px-3 py-2 rounded-lg text-sm text-left ${
-                  active ? 'bg-moss-500 text-white' : 'bg-slate-800 text-slate-300'
-                }`}
-              >
-                <span className="truncate">{sec.name}</span>
-                <span className={active ? 'text-moss-100' : 'text-slate-500'}>{sec.count}</span>
-              </button>
-            );
-          })}
         </div>
       </Section>
     </Sheet>

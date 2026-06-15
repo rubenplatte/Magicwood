@@ -14,27 +14,13 @@ import { useUI } from '../store/useUI';
 import { useFilters } from '../store/useFilters';
 import { countActiveFilters } from '../lib/filter';
 import { crag, sectors, minGradeNum, maxGradeNum } from '../lib/data';
+import { LAYERS, type LayerKey } from '../lib/tiles';
 import { Sheet } from '../components/Sheet';
 import { BoulderCard } from '../components/BoulderCard';
 import type { Boulder, Sector } from '../lib/types';
 
 // Above this zoom we show sector names as permanent labels.
 const LABEL_ZOOM = 17;
-
-const LAYERS = {
-  map: {
-    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-    attribution: '&copy; OpenStreetMap, &copy; CARTO',
-    maxZoom: 20,
-  },
-  satellite: {
-    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    attribution: 'Imagery &copy; Esri',
-    maxZoom: 19,
-  },
-} as const;
-
-type LayerKey = keyof typeof LAYERS;
 
 function ZoomTracker({ onZoom }: { onZoom: (z: number) => void }) {
   useMapEvents({ zoomend: (e) => onZoom(e.target.getZoom()) });
@@ -133,6 +119,7 @@ export function MapScreen() {
       <MapContainer
         center={[crag.lat, crag.lng]}
         zoom={crag.zoom}
+        maxZoom={18}
         className="h-full w-full"
         zoomControl={false}
       >

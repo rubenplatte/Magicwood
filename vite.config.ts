@@ -34,21 +34,27 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2,json}'],
+        // Keep the whole app shell + bundled boulder data available offline,
+        // and serve photos / map tiles from cache first (they're immutable).
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/storage\.e5gc6\.upcloudobjects\.com\/.*/i,
             handler: 'CacheFirst',
             options: {
-              cacheName: 'boulder-thumbs',
-              expiration: { maxEntries: 500, maxAgeSeconds: 60 * 60 * 24 * 30 },
+              cacheName: 'mw-photos',
+              expiration: { maxEntries: 3000, maxAgeSeconds: 60 * 60 * 24 * 180 },
+              cacheableResponse: { statuses: [0, 200] },
             },
           },
           {
-            urlPattern: /^https:\/\/[abc]?\.?tile\.openstreetmap\.org\/.*/i,
+            // CARTO basemap + Esri World Imagery tiles
+            urlPattern:
+              /^https:\/\/(basemaps\.cartocdn\.com|[a-d]\.basemaps\.cartocdn\.com|server\.arcgisonline\.com)\/.*/i,
             handler: 'CacheFirst',
             options: {
-              cacheName: 'osm-tiles',
-              expiration: { maxEntries: 1000, maxAgeSeconds: 60 * 60 * 24 * 30 },
+              cacheName: 'mw-tiles',
+              expiration: { maxEntries: 4000, maxAgeSeconds: 60 * 60 * 24 * 180 },
+              cacheableResponse: { statuses: [0, 200] },
             },
           },
         ],

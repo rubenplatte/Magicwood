@@ -24,6 +24,7 @@ export function BoulderDetailSheet() {
           src={boulder.image}
           alt={boulder.name}
           decoding="async"
+          onError={(e) => (e.currentTarget.style.display = 'none')}
           className="w-full max-h-72 object-cover rounded-xl mb-3 bg-slate-800"
         />
       )}

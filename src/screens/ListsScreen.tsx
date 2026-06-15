@@ -6,6 +6,7 @@ import { useUI } from '../store/useUI';
 import { boulders } from '../lib/data';
 import { defaultFilters, type Filters } from '../lib/filter';
 import { minGradeNum, maxGradeNum } from '../lib/data';
+import { OfflineCard } from '../components/OfflineCard';
 
 export function ListsScreen() {
   const liked = useStore((s) => s.liked);
@@ -83,6 +84,8 @@ export function ListsScreen() {
             </button>
           ))}
         </section>
+
+        <OfflineCard />
 
         {/* Custom lists */}
         <section>

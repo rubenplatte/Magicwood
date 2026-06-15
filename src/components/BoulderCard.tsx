@@ -13,12 +13,13 @@ export function BoulderCard({ boulder }: { boulder: Boulder }) {
       className="flex gap-3 p-3 bg-slate-800/60 rounded-2xl border border-slate-700/60 active:bg-slate-800 cursor-pointer"
     >
       <div className="shrink-0 w-20 h-20 rounded-xl overflow-hidden bg-slate-700">
-        {boulder.image ? (
+        {boulder.thumb ? (
           <img
-            src={boulder.image}
+            src={boulder.thumb}
             alt=""
             loading="lazy"
             decoding="async"
+            onError={(e) => (e.currentTarget.style.visibility = 'hidden')}
             className="w-full h-full object-cover"
           />
         ) : (
