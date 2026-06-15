@@ -44,9 +44,10 @@ export default function App() {
 
       <nav
         className="shrink-0 grid grid-cols-3 border-t border-slate-800 bg-slate-900"
-        // Only add a small slice of the home-indicator inset — stacking its full
-        // height on top of the buttons is what made the installed nav oversized.
-        style={{ paddingBottom: 'max(0.15rem, calc(env(safe-area-inset-bottom) - 1.15rem))' }}
+        // Clamp the home-indicator inset to a small, fixed clearance. iOS reports
+        // ~34px when installed (0 in Safari); adding it all made the nav tall, so
+        // we cap it — the bar stays compact and just clears the home indicator.
+        style={{ paddingBottom: 'max(0.25rem, min(env(safe-area-inset-bottom), 0.5rem))' }}
       >
         {TABS.map(({ key, label, icon: Icon }) => (
           <button

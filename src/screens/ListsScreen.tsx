@@ -177,7 +177,8 @@ export function ListsScreen() {
           </div>
         </section>
 
-        {/* Extra feature, kept at the very bottom */}
+        {/* Extra feature, kept at the very bottom with a clear separator */}
+        <hr className="border-slate-800 -mx-4" />
         <OfflineCard />
 
         <p className="text-xs text-slate-600 pt-2">
