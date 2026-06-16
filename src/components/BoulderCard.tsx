@@ -2,6 +2,7 @@ import { Users, MapPin } from 'lucide-react';
 import { Stars } from './Stars';
 import { ActionBar } from './ActionBar';
 import { useUI } from '../store/useUI';
+import { areaChipClass, areaName } from '../lib/areas';
 import type { Boulder } from '../lib/types';
 
 export function BoulderCard({ boulder }: { boulder: Boulder }) {
@@ -44,7 +45,14 @@ export function BoulderCard({ boulder }: { boulder: Boulder }) {
           )}
         </div>
 
-        <div className="mt-1 flex items-center gap-3 text-xs text-slate-400">
+        <div className="mt-1 flex items-center gap-2 text-xs text-slate-400">
+          <span
+            className={`shrink-0 px-1.5 py-0.5 rounded font-semibold ${areaChipClass(
+              boulder.area
+            )}`}
+          >
+            {areaName(boulder.area)}
+          </span>
           <span className="inline-flex items-center gap-1">
             <Users size={12} /> {boulder.ascents}
           </span>

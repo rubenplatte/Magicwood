@@ -1,12 +1,20 @@
-// Scraper for Magic Wood boulders from publicly available 27crags pages.
+// Scraper for boulders from publicly available 27crags pages.
 //
-// Sources (all public, no login required):
-//   - https://27crags.com/crags/magic-wood/routelist  -> every boulder with
+// Covers three areas, each a public 27crags crag:
+//   - magic-wood   (Magic Wood, Switzerland)
+//   - chironico    (Chironico, Ticino)
+//   - cresciano    (Cresciano, Ticino)
+//
+// Sources per area (all public, no login required):
+//   - https://27crags.com/crags/<crag>/routelist -> every boulder with
 //     name, grade, type, ascents, rating, votes, sector and thumbnail
-//   - https://27crags.com/crags/magic-wood/cragmap     -> GPS coordinates per
+//   - https://27crags.com/crags/<crag>/cragmap   -> GPS coordinates per
 //     sector (the public topos do not expose per-boulder coordinates)
 //
-// Output: src/data/boulders.json and src/data/sectors.json
+// Output: src/data/boulders.json and src/data/sectors.json, with every
+// boulder and sector tagged with its `area` so the app can label, sort and
+// filter across all three crags. Magic Wood slugs are preserved exactly so
+// existing saved likes / lists / ticks keep matching.
 //
 // Re-run any time with:  npm run scrape
 //
@@ -20,9 +28,17 @@ import { fileURLToPath } from 'node:url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = resolve(__dirname, '../src/data');
 
-const ROUTELIST_URL = 'https://27crags.com/crags/magic-wood/routelist';
-const CRAGMAP_URL = 'https://27crags.com/crags/magic-wood/cragmap';
-const CRAG_URL = 'https://27crags.com/crags/magic-wood';
+// The areas to scrape, in the display order used across the app
+// (Magic Wood first, then the two Ticino areas).
+const AREAS = [
+  { slug: 'magic-wood', name: 'Magic Wood' },
+  { slug: 'chironico', name: 'Chironico' },
+  { slug: 'cresciano', name: 'Cresciano' },
+];
+
+const ROUTELIST_URL = (crag) => `https://27crags.com/crags/${crag}/routelist`;
+const CRAGMAP_URL = (crag) => `https://27crags.com/crags/${crag}/cragmap`;
+const ROUTE_URL = (crag, slug) => `https://27crags.com/crags/${crag}/routes/${slug}`;
 const PHOTO_URL = (id) => `https://27crags.com/photos/${id}`;
 const PHOTO_CONCURRENCY = 12;
 
@@ -56,37 +72,40 @@ const decode = (s) =>
     .replace(/&eacute;/g, 'é')
     .replace(/&nbsp;/g, ' ');
 
-function parseSectors(html) {
+function parseSectors(html, area) {
   const m = html.match(/GoogleMap\((\{[\s\S]*?\})\);/);
-  if (!m) throw new Error('Could not find GoogleMap() data in cragmap');
+  if (!m) throw new Error(`Could not find GoogleMap() data in ${area} cragmap`);
   const data = JSON.parse(m[1]);
   const sectors = {};
   for (const s of data.sectors || []) {
     const slug = s.url.split('/').pop();
     sectors[slug] = {
       slug,
+      area,
       name: decode(s.name),
       lat: parseFloat(s.latitude),
       lng: parseFloat(s.longitude),
       kind: s.kind,
     };
   }
-  return {
-    crag: {
-      name: data.crag?.name || 'Magic Wood',
-      lat: parseFloat(data.map?.latitude ?? data.crag?.latitude),
-      lng: parseFloat(data.map?.longitude ?? data.crag?.longitude),
-      zoom: data.map?.zoom ?? 15,
-    },
-    sectors,
+  const crag = {
+    name: data.crag?.name || area,
+    lat: parseFloat(data.map?.latitude ?? data.crag?.latitude),
+    lng: parseFloat(data.map?.longitude ?? data.crag?.longitude),
+    zoom: data.map?.zoom ?? 15,
   };
+  return { crag, sectors };
 }
 
-function parseRoutes(html) {
+function parseRoutes(html, area) {
   const rows = html.split(/<tr class="[^"]*">/);
   const routes = [];
+  const routeHref = new RegExp(`href="/crags/${area}/routes/([^"]+)"`);
+  const sectorHref = new RegExp(
+    `<td class="stxt hidden-xs">\\s*<a href="/crags/${area}/topos/([^"]+)">([^<]+)</a>`
+  );
   for (const r of rows) {
-    const slugM = r.match(/href="\/crags\/magic-wood\/routes\/([^"]+)"/);
+    const slugM = r.match(routeHref);
     if (!slugM) continue;
     const nameM = r.match(/class="lfont"[^>]*>([^<]+)<\/a>/);
     const gradeNumM = r.match(/<div class="hidden">\s*(\d+)\s*<\/div>\s*<span class="grade">/);
@@ -96,14 +115,13 @@ function parseRoutes(html) {
     );
     const ratingM = r.match(/<div class="rating">([\d.]+)<\/div>/);
     const votesM = r.match(/Based on (\d+) votes/);
-    const sectorM = r.match(
-      /<td class="stxt hidden-xs">\s*<a href="\/crags\/magic-wood\/topos\/([^"]+)">([^<]+)<\/a>/
-    );
+    const sectorM = r.match(sectorHref);
     const thumbM = r.match(/tiny-topo-image">\s*<img[^>]*src="([^"]+)"/);
     const hasVideo = /tag video/.test(r);
 
     routes.push({
       slug: slugM[1],
+      area,
       name: nameM ? decode(stripTags(nameM[1])) : slugM[1],
       grade: gradeM ? gradeM[1].trim() : null,
       gradeNum: gradeNumM ? parseInt(gradeNumM[1], 10) : null,
@@ -115,7 +133,7 @@ function parseRoutes(html) {
       sector: sectorM ? decode(stripTags(sectorM[2])) : null,
       thumb: thumbM ? thumbM[1] : null,
       hasVideo,
-      url: `https://27crags.com/crags/magic-wood/routes/${slugM[1]}`,
+      url: ROUTE_URL(area, slugM[1]),
     });
   }
   return routes;
@@ -132,7 +150,7 @@ function photoIdFromThumb(thumb) {
 
 async function resolveHighResImages(routes) {
   const ids = [...new Set(routes.map((r) => photoIdFromThumb(r.thumb)).filter(Boolean))];
-  console.log(`  resolving high-res images for ${ids.length} unique photos…`);
+  console.log(`Resolving high-res images for ${ids.length} unique photos…`);
   const xlById = new Map();
   let done = 0;
 
@@ -148,7 +166,7 @@ async function resolveHighResImages(routes) {
         /* leave unresolved; falls back to the thumbnail */
       }
       done++;
-      if (done % 100 === 0) console.log(`    ${done}/${ids.length}`);
+      if (done % 200 === 0) console.log(`    ${done}/${ids.length}`);
     }
   }
 
@@ -167,18 +185,19 @@ async function resolveHighResImages(routes) {
   console.log(`  resolved ${resolved}/${routes.length} high-res images`);
 }
 
-async function main() {
+async function scrapeArea(area) {
+  console.log(`\n=== ${area.name} (${area.slug}) ===`);
   console.log('Fetching cragmap (sector GPS)…');
-  const cragmapHtml = await fetchText(CRAGMAP_URL);
-  const { crag, sectors } = parseSectors(cragmapHtml);
+  const cragmapHtml = await fetchText(CRAGMAP_URL(area.slug));
+  const { crag, sectors } = parseSectors(cragmapHtml, area.slug);
   console.log(`  found ${Object.keys(sectors).length} sectors`);
 
   console.log('Fetching routelist (boulders)…');
-  const routelistHtml = await fetchText(ROUTELIST_URL);
-  const routes = parseRoutes(routelistHtml);
+  const routelistHtml = await fetchText(ROUTELIST_URL(area.slug));
+  const routes = parseRoutes(routelistHtml, area.slug);
   console.log(`  found ${routes.length} boulders`);
 
-  // Join GPS coordinates onto each boulder via its sector.
+  // Join GPS coordinates onto each boulder via its sector (within this area).
   let withGps = 0;
   for (const route of routes) {
     const sec = route.sectorSlug ? sectors[route.sectorSlug] : null;
@@ -193,8 +212,6 @@ async function main() {
   }
   console.log(`  ${withGps}/${routes.length} boulders have GPS via sector`);
 
-  await resolveHighResImages(routes);
-
   // Only keep sectors that actually contain boulders, for the map.
   const usedSlugs = new Set(routes.map((r) => r.sectorSlug).filter(Boolean));
   const usedSectors = Object.values(sectors)
@@ -202,22 +219,51 @@ async function main() {
     .map((s) => ({
       ...s,
       count: routes.filter((r) => r.sectorSlug === s.slug).length,
-    }))
+    }));
+
+  return {
+    // Use our own short display name (e.g. "Chironico", not the crag's
+    // "Chironico North") but keep the crag's map centre + zoom.
+    area: { slug: area.slug, ...crag, name: area.name, count: routes.length },
+    routes,
+    sectors: usedSectors,
+  };
+}
+
+async function main() {
+  const results = [];
+  for (const area of AREAS) {
+    results.push(await scrapeArea(area));
+  }
+
+  const allRoutes = results.flatMap((r) => r.routes);
+  const allSectors = results
+    .flatMap((r) => r.sectors)
     .sort((a, b) => a.name.localeCompare(b.name));
+  const areas = results.map((r) => r.area);
+
+  console.log(`\nResolving high-res images across all ${allRoutes.length} boulders…`);
+  await resolveHighResImages(allRoutes);
 
   mkdirSync(DATA_DIR, { recursive: true });
-  const payload = {
-    crag,
-    scrapedAt: new Date().toISOString(),
-    count: routes.length,
-    boulders: routes,
-  };
-  writeFileSync(resolve(DATA_DIR, 'boulders.json'), JSON.stringify(payload));
+  writeFileSync(
+    resolve(DATA_DIR, 'boulders.json'),
+    JSON.stringify({
+      areas,
+      scrapedAt: new Date().toISOString(),
+      count: allRoutes.length,
+      boulders: allRoutes,
+    })
+  );
   writeFileSync(
     resolve(DATA_DIR, 'sectors.json'),
-    JSON.stringify({ crag, sectors: usedSectors })
+    JSON.stringify({ areas, sectors: allSectors })
   );
-  console.log(`Wrote ${routes.length} boulders and ${usedSectors.length} sectors to src/data/`);
+  console.log(
+    `\nWrote ${allRoutes.length} boulders and ${allSectors.length} sectors ` +
+      `across ${areas.length} areas to src/data/`
+  );
+  for (const a of areas) console.log(`  ${a.name}: ${a.count} boulders`);
 }
 
 main().catch((err) => {

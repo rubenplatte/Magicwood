@@ -5,6 +5,7 @@ import { ActionBar } from './ActionBar';
 import { useUI } from '../store/useUI';
 import { useStore } from '../store/useStore';
 import { getBoulder } from '../lib/data';
+import { areaChipClass, areaName } from '../lib/areas';
 
 export function BoulderDetailSheet() {
   const slug = useUI((s) => s.detailSlug);
@@ -41,7 +42,14 @@ export function BoulderDetailSheet() {
         </div>
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-300">
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-300">
+        <span
+          className={`px-2 py-0.5 rounded-md font-semibold text-xs ${areaChipClass(
+            boulder.area
+          )}`}
+        >
+          {areaName(boulder.area)}
+        </span>
         <span className="inline-flex items-center gap-1.5">
           <Users size={15} /> {boulder.ascents} sends
         </span>

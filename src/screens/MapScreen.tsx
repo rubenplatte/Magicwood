@@ -13,7 +13,7 @@ import { useFilteredBoulders } from '../lib/hooks';
 import { useUI } from '../store/useUI';
 import { useFilters } from '../store/useFilters';
 import { countActiveFilters } from '../lib/filter';
-import { crag, sectors, minGradeNum, maxGradeNum } from '../lib/data';
+import { defaultArea, sectors, minGradeNum, maxGradeNum } from '../lib/data';
 import { LAYERS, type LayerKey } from '../lib/tiles';
 import { Sheet } from '../components/Sheet';
 import { BoulderCard } from '../components/BoulderCard';
@@ -23,6 +23,31 @@ import type { Boulder, Sector } from '../lib/types';
 // small area). Tying this to zoom alone — not the live in-view count — keeps it
 // stable while panning, so labels don't flicker on/off as you move the map.
 const LABEL_ZOOM = 20;
+
+// Auto-fit the map to whatever areas are currently in the filtered results:
+// pick one area in the filter and the map zooms to it; with no area filter it
+// fits all three. Keyed on the set of areas present (not every minor filter
+// tweak) so the view only jumps when you actually change areas, never mid-pan.
+function FitToAreas({
+  bounds,
+  areaKey,
+}: {
+  bounds: [number, number][];
+  areaKey: string;
+}) {
+  const map = useMap();
+  useEffect(() => {
+    if (bounds.length === 0) return;
+    if (bounds.length === 1) {
+      map.setView(bounds[0], Math.max(map.getZoom(), 14), { animate: true });
+    } else {
+      map.fitBounds(bounds, { padding: [48, 48], maxZoom: 15, animate: true });
+    }
+    // Only refit when the area composition changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [areaKey]);
+  return null;
+}
 
 function ZoomTracker({ onZoom }: { onZoom: (z: number) => void }) {
   const map = useMapEvents({ zoomend: () => onZoom(map.getZoom()) });
@@ -93,7 +118,7 @@ export function MapScreen() {
   const filters = useFilters((s) => s.filters);
   const activeCount = countActiveFilters(filters, minGradeNum, maxGradeNum);
   const [selected, setSelected] = useState<Sector | null>(null);
-  const [zoom, setZoom] = useState(crag.zoom);
+  const [zoom, setZoom] = useState(defaultArea.zoom);
   const [layer, setLayer] = useState<LayerKey>('map');
   const [userPos, setUserPos] = useState<UserPos | null>(null);
 
@@ -116,6 +141,16 @@ export function MapScreen() {
     [bySector]
   );
 
+  // Bounds + an area signature for auto-fitting the view.
+  const bounds = useMemo(
+    () => points.map((p) => [p.sector.lat, p.sector.lng] as [number, number]),
+    [points]
+  );
+  const areaKey = useMemo(
+    () => [...new Set(results.map((b) => b.area))].sort().join(','),
+    [results]
+  );
+
   const showLabels = zoom >= LABEL_ZOOM;
   const selectedBoulders = selected ? bySector.get(selected.slug) ?? [] : [];
   const tiles = LAYERS[layer];
@@ -123,8 +158,8 @@ export function MapScreen() {
   return (
     <div className="relative h-full">
       <MapContainer
-        center={[crag.lat, crag.lng]}
-        zoom={crag.zoom}
+        center={[defaultArea.lat, defaultArea.lng]}
+        zoom={defaultArea.zoom}
         maxZoom={20}
         className="h-full w-full"
         zoomControl={false}
@@ -139,6 +174,7 @@ export function MapScreen() {
           maxNativeZoom={19}
         />
         <ZoomTracker onZoom={setZoom} />
+        <FitToAreas bounds={bounds} areaKey={areaKey} />
         <LocateControl onPos={setUserPos} />
 
         {points.map(({ sector, count }) => {

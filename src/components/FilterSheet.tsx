@@ -3,7 +3,8 @@ import { Sheet } from './Sheet';
 import { useFilters } from '../store/useFilters';
 import { useUI } from '../store/useUI';
 import { Stars } from './Stars';
-import { gradeScale, minGradeNum, maxGradeNum } from '../lib/data';
+import { areas, gradeScale, minGradeNum, maxGradeNum } from '../lib/data';
+import { areaChipClass } from '../lib/areas';
 import type { SortKey } from '../lib/filter';
 
 const SORTS: { key: SortKey; label: string }[] = [
@@ -11,6 +12,7 @@ const SORTS: { key: SortKey; label: string }[] = [
   { key: 'ascents', label: 'Most sends' },
   { key: 'grade-asc', label: 'Grade ↑' },
   { key: 'grade-desc', label: 'Grade ↓' },
+  { key: 'area', label: 'Area' },
   { key: 'name', label: 'Name' },
 ];
 
@@ -28,6 +30,7 @@ export function FilterSheet() {
   const tab = useUI((s) => s.tab);
   const filters = useFilters((s) => s.filters);
   const set = useFilters((s) => s.set);
+  const toggleArea = useFilters((s) => s.toggleArea);
   const reset = useFilters((s) => s.reset);
 
   const minIdx = useMemo(
@@ -90,6 +93,30 @@ export function FilterSheet() {
           </div>
         </Section>
       )}
+
+      {/* Area */}
+      <Section title="Area">
+        <div className="flex items-center gap-2 flex-wrap">
+          {areas.map((a) => {
+            const on = filters.areas.includes(a.slug);
+            return (
+              <button
+                key={a.slug}
+                onClick={() => toggleArea(a.slug)}
+                className={`px-3 py-1.5 rounded-full text-sm font-medium ${
+                  on ? areaChipClass(a.slug) + ' ring-2 ring-inset ring-white/30' : 'bg-slate-800 text-slate-300'
+                }`}
+              >
+                {a.name}
+                <span className={on ? 'opacity-70' : 'text-slate-500'}> · {a.count}</span>
+              </button>
+            );
+          })}
+        </div>
+        {filters.areas.length === 0 && (
+          <p className="text-xs text-slate-500 mt-1.5">All areas</p>
+        )}
+      </Section>
 
       {/* Grade range */}
       <Section title="Grade">

@@ -1,6 +1,7 @@
-import type { Boulder } from './types';
+import { areaRank } from './data';
+import type { AreaSlug, Boulder } from './types';
 
-export type SortKey = 'rating' | 'ascents' | 'grade-asc' | 'grade-desc' | 'name';
+export type SortKey = 'rating' | 'ascents' | 'grade-asc' | 'grade-desc' | 'name' | 'area';
 
 export interface Filters {
   search: string;
@@ -8,6 +9,7 @@ export interface Filters {
   maxGrade: number; // gradeNum
   minRating: number; // 0–3
   minAscents: number;
+  areas: AreaSlug[]; // area slugs; empty = all areas
   sectors: string[]; // sector slugs; empty = all
   withVideo: boolean;
   // Saved-state filters
@@ -35,6 +37,7 @@ export function defaultFilters(minGrade: number, maxGrade: number): Filters {
     maxGrade,
     minRating: 0,
     minAscents: 0,
+    areas: [],
     sectors: [],
     withVideo: false,
     savedOnly: false,
@@ -52,6 +55,7 @@ export function countActiveFilters(f: Filters, minGrade: number, maxGrade: numbe
   if (f.minGrade > minGrade || f.maxGrade < maxGrade) n++;
   if (f.minRating > 0) n++;
   if (f.minAscents > 0) n++;
+  if (f.areas.length > 0) n++;
   if (f.sectors.length > 0) n++;
   if (f.withVideo) n++;
   if (f.savedOnly) n++;
@@ -75,6 +79,7 @@ function matches(b: Boulder, f: Filters, s: SavedState): boolean {
   }
   if (b.rating < f.minRating) return false;
   if (b.ascents < f.minAscents) return false;
+  if (f.areas.length > 0 && !f.areas.includes(b.area)) return false;
   if (f.sectors.length > 0 && (!b.sectorSlug || !f.sectors.includes(b.sectorSlug)))
     return false;
   if (f.withVideo && !b.hasVideo) return false;
@@ -109,6 +114,13 @@ function compare(a: Boulder, b: Boulder, sort: SortKey): number {
       return (b.gradeNum ?? -Infinity) - (a.gradeNum ?? -Infinity);
     case 'name':
       return a.name.localeCompare(b.name);
+    case 'area':
+      // Magic Wood → Chironico → Cresciano, then best-rated within each area.
+      return (
+        areaRank(a.area) - areaRank(b.area) ||
+        b.rating - a.rating ||
+        b.ascents - a.ascents
+      );
   }
 }
 

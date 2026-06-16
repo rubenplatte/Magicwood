@@ -1,5 +1,17 @@
+export type AreaSlug = 'magic-wood' | 'chironico' | 'cresciano';
+
+export interface Area {
+  slug: AreaSlug;
+  name: string;
+  lat: number;
+  lng: number;
+  zoom: number;
+  count: number;
+}
+
 export interface Boulder {
   slug: string;
+  area: AreaSlug;
   name: string;
   grade: string | null;
   gradeNum: number | null;
@@ -18,7 +30,7 @@ export interface Boulder {
 }
 
 export interface BoulderData {
-  crag: { name: string; lat: number; lng: number; zoom: number };
+  areas: Area[];
   scrapedAt: string;
   count: number;
   boulders: Boulder[];
@@ -26,6 +38,7 @@ export interface BoulderData {
 
 export interface Sector {
   slug: string;
+  area: AreaSlug;
   name: string;
   lat: number;
   lng: number;
@@ -34,7 +47,7 @@ export interface Sector {
 }
 
 export interface SectorData {
-  crag: { name: string; lat: number; lng: number; zoom: number };
+  areas: Area[];
   sectors: Sector[];
 }
 

@@ -1,18 +1,20 @@
 # Magic Wood Boulders 🪨
 
 A mobile-first, installable web app (PWA) for finding the boulders you most want
-to climb in **Magic Wood**, Switzerland — built as a focused alternative to the
-27crags map screen, using the data 27crags already exposes (ratings, number of
-sends, sectors and GPS) for **rich filtering**, not just grades.
+to climb in **Magic Wood**, **Chironico** and **Cresciano**, Switzerland — built
+as a focused alternative to the 27crags map screen, using the data 27crags
+already exposes (ratings, number of sends, sectors and GPS) for **rich
+filtering**, not just grades.
 
-> 1,360 boulders across 381 sectors, with star ratings, send counts and
-> per-sector GPS.
+> ~3,500 boulders across three areas, with star ratings, send counts and
+> per-sector GPS. Each boulder is labelled by area, and you can sort and filter
+> by area while your likes and custom lists span all three.
 
 ## Features
 
 - **Rich filters** — combine grade range, minimum star rating, minimum number
-  of sends, sector, and "has video beta". Sort by top-rated, most-sent, grade
-  or name.
+  of sends, **area** (Magic Wood / Chironico / Cresciano), sector, and "has
+  video beta". Sort by top-rated, most-sent, grade, **area** or name.
 - **Save & organise** — ❤️ like, 🎯 mark as project, ✓ tick as **redpoint** or
   ⚡ **flash**, and add boulders to your own custom **lists** (tick list,
   warmups, next trip…).
@@ -43,13 +45,17 @@ npm run preview    # preview the production build
 
 ## Data
 
-Boulder data is scraped from **publicly available** 27crags pages for Magic Wood
-(no login, no premium data):
+Boulder data is scraped from **publicly available** 27crags pages for each area
+— `magic-wood`, `chironico` and `cresciano` (no login, no premium data):
 
-- `…/magic-wood/routelist` → name, grade, type, number of ascents, rating, votes
+- `…/<area>/routelist` → name, grade, type, number of ascents, rating, votes
   and sector for every boulder
-- `…/magic-wood/cragmap` → GPS coordinates per sector (per-boulder coordinates
+- `…/<area>/cragmap` → GPS coordinates per sector (per-boulder coordinates
   aren't public, so boulders are mapped at their sector)
+
+Every boulder and sector is tagged with its `area`. Magic Wood slugs are kept
+byte-for-byte stable across re-scrapes so saved likes / lists / ticks keep
+matching.
 
 Regenerate the dataset any time with:
 
