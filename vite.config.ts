@@ -34,6 +34,10 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2,json}'],
+        // The boulder data for all areas is bundled into the main JS, which now
+        // exceeds Workbox's 2 MiB default precache limit. Raise it so the whole
+        // app shell + data is still precached for offline use at the crag.
+        maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
         // Keep the whole app shell + bundled boulder data available offline,
         // and serve photos / map tiles from cache first (they're immutable).
         runtimeCaching: [

@@ -26,7 +26,7 @@ const LABEL_ZOOM = 20;
 
 // Auto-fit the map to whatever areas are currently in the filtered results:
 // pick one area in the filter and the map zooms to it; with no area filter it
-// fits all three. Keyed on the set of areas present (not every minor filter
+// fits them all. Keyed on the set of areas present (not every minor filter
 // tweak) so the view only jumps when you actually change areas, never mid-pan.
 function FitToAreas({
   bounds,

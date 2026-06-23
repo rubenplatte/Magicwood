@@ -1,19 +1,19 @@
 # Magic Wood Boulders 🪨
 
 A mobile-first, installable web app (PWA) for finding the boulders you most want
-to climb in **Magic Wood**, **Chironico** and **Cresciano**, Switzerland — built
-as a focused alternative to the 27crags map screen, using the data 27crags
-already exposes (ratings, number of sends, sectors and GPS) for **rich
-filtering**, not just grades.
+to climb in **Magic Wood**, **Chironico**, **Cresciano** and **Gottardo**,
+Switzerland — built as a focused alternative to the 27crags map screen, using
+the data 27crags already exposes (ratings, number of sends, sectors and GPS) for
+**rich filtering**, not just grades.
 
-> ~3,500 boulders across three areas, with star ratings, send counts and
+> Thousands of boulders across four areas, with star ratings, send counts and
 > per-sector GPS. Each boulder is labelled by area, and you can sort and filter
-> by area while your likes and custom lists span all three.
+> by area while your likes and custom lists span them all.
 
 ## Features
 
 - **Rich filters** — combine grade range, minimum star rating, minimum number
-  of sends, **area** (Magic Wood / Chironico / Cresciano), sector, and "has
+  of sends, **area** (Magic Wood / Chironico / Cresciano / Gottardo), sector, and "has
   video beta". Sort by top-rated, most-sent, grade, **area** or name.
 - **Save & organise** — ❤️ like, 🎯 mark as project, ✓ tick as **redpoint** or
   ⚡ **flash**, and add boulders to your own custom **lists** (tick list,
@@ -45,13 +45,18 @@ npm run preview    # preview the production build
 
 ## Data
 
-Boulder data is scraped from **publicly available** 27crags pages for each area
-— `magic-wood`, `chironico` and `cresciano` (no login, no premium data):
+Boulder data is scraped from **publicly available** 27crags pages for each crag
+— `magic-wood`, `chironico`, `cresciano` and the three Gotthard crags that make
+up Gottardo (`gottardo`, `gottardo-centrale` and `gotthardreuss`/Mätteli) — with
+no login and no premium data:
 
-- `…/<area>/routelist` → name, grade, type, number of ascents, rating, votes
+- `…/<crag>/routelist` → name, grade, type, number of ascents, rating, votes
   and sector for every boulder
-- `…/<area>/cragmap` → GPS coordinates per sector (per-boulder coordinates
+- `…/<crag>/cragmap` → GPS coordinates per sector (per-boulder coordinates
   aren't public, so boulders are mapped at their sector)
+
+An app area can bundle several neighbouring crags (Gottardo merges three) while
+still showing as one area for labelling, sorting and filtering.
 
 Every boulder and sector is tagged with its `area`. Magic Wood slugs are kept
 byte-for-byte stable across re-scrapes so saved likes / lists / ticks keep

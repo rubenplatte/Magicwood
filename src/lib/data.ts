@@ -10,9 +10,9 @@ export const boulders: Boulder[] = boulderData.boulders;
 export const sectors: Sector[] = sectorData.sectors;
 
 // Areas in their canonical display / sort order: Magic Wood → Chironico →
-// Cresciano. We derive the order from this list rather than the data file so
-// the app stays stable even if the scrape order ever changes.
-export const AREA_ORDER: AreaSlug[] = ['magic-wood', 'chironico', 'cresciano'];
+// Cresciano → Gottardo. We derive the order from this list rather than the data
+// file so the app stays stable even if the scrape order ever changes.
+export const AREA_ORDER: AreaSlug[] = ['magic-wood', 'chironico', 'cresciano', 'gottardo'];
 
 export const areas: Area[] = [...boulderData.areas].sort(
   (a, b) => AREA_ORDER.indexOf(a.slug) - AREA_ORDER.indexOf(b.slug)

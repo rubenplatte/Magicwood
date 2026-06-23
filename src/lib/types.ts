@@ -1,4 +1,4 @@
-export type AreaSlug = 'magic-wood' | 'chironico' | 'cresciano';
+export type AreaSlug = 'magic-wood' | 'chironico' | 'cresciano' | 'gottardo';
 
 export interface Area {
   slug: AreaSlug;

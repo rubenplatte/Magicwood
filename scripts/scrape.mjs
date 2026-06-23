@@ -1,11 +1,14 @@
 // Scraper for boulders from publicly available 27crags pages.
 //
-// Covers three areas, each a public 27crags crag:
+// Covers four areas. Most areas map to a single public 27crags crag, but an
+// area can also aggregate several neighbouring crags into one (Gottardo bundles
+// the Gottardo, Gottardo Centrale and Mätteli crags):
 //   - magic-wood   (Magic Wood, Switzerland)
 //   - chironico    (Chironico, Ticino)
 //   - cresciano    (Cresciano, Ticino)
+//   - gottardo     (Gottardo + Gottardo Centrale + Mätteli, Gotthard)
 //
-// Sources per area (all public, no login required):
+// Sources per crag (all public, no login required):
 //   - https://27crags.com/crags/<crag>/routelist -> every boulder with
 //     name, grade, type, ascents, rating, votes, sector and thumbnail
 //   - https://27crags.com/crags/<crag>/cragmap   -> GPS coordinates per
@@ -13,8 +16,8 @@
 //
 // Output: src/data/boulders.json and src/data/sectors.json, with every
 // boulder and sector tagged with its `area` so the app can label, sort and
-// filter across all three crags. Magic Wood slugs are preserved exactly so
-// existing saved likes / lists / ticks keep matching.
+// filter across all areas. Magic Wood slugs are preserved exactly so existing
+// saved likes / lists / ticks keep matching.
 //
 // Re-run any time with:  npm run scrape
 //
@@ -28,12 +31,17 @@ import { fileURLToPath } from 'node:url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = resolve(__dirname, '../src/data');
 
-// The areas to scrape, in the display order used across the app
-// (Magic Wood first, then the two Ticino areas).
+// The areas to scrape, in the display order used across the app (Magic Wood
+// first, then the Ticino areas, then Gotthard). Each area lists the public
+// 27crags crag slug(s) it is built from — a single slug for most areas, or
+// several when one app area aggregates neighbouring crags.
 const AREAS = [
-  { slug: 'magic-wood', name: 'Magic Wood' },
-  { slug: 'chironico', name: 'Chironico' },
-  { slug: 'cresciano', name: 'Cresciano' },
+  { slug: 'magic-wood', name: 'Magic Wood', crags: ['magic-wood'] },
+  { slug: 'chironico', name: 'Chironico', crags: ['chironico'] },
+  { slug: 'cresciano', name: 'Cresciano', crags: ['cresciano'] },
+  // Gottardo bundles three adjacent Gotthard crags into one area. Mätteli's
+  // 27crags slug is `gotthardreuss`.
+  { slug: 'gottardo', name: 'Gottardo', crags: ['gottardo', 'gottardo-centrale', 'gotthardreuss'] },
 ];
 
 const ROUTELIST_URL = (crag) => `https://27crags.com/crags/${crag}/routelist`;
@@ -72,16 +80,16 @@ const decode = (s) =>
     .replace(/&eacute;/g, 'é')
     .replace(/&nbsp;/g, ' ');
 
-function parseSectors(html, area) {
+function parseSectors(html, cragSlug, areaSlug) {
   const m = html.match(/GoogleMap\((\{[\s\S]*?\})\);/);
-  if (!m) throw new Error(`Could not find GoogleMap() data in ${area} cragmap`);
+  if (!m) throw new Error(`Could not find GoogleMap() data in ${cragSlug} cragmap`);
   const data = JSON.parse(m[1]);
   const sectors = {};
   for (const s of data.sectors || []) {
     const slug = s.url.split('/').pop();
     sectors[slug] = {
       slug,
-      area,
+      area: areaSlug,
       name: decode(s.name),
       lat: parseFloat(s.latitude),
       lng: parseFloat(s.longitude),
@@ -89,7 +97,7 @@ function parseSectors(html, area) {
     };
   }
   const crag = {
-    name: data.crag?.name || area,
+    name: data.crag?.name || cragSlug,
     lat: parseFloat(data.map?.latitude ?? data.crag?.latitude),
     lng: parseFloat(data.map?.longitude ?? data.crag?.longitude),
     zoom: data.map?.zoom ?? 15,
@@ -97,12 +105,12 @@ function parseSectors(html, area) {
   return { crag, sectors };
 }
 
-function parseRoutes(html, area) {
+function parseRoutes(html, cragSlug, areaSlug) {
   const rows = html.split(/<tr class="[^"]*">/);
   const routes = [];
-  const routeHref = new RegExp(`href="/crags/${area}/routes/([^"]+)"`);
+  const routeHref = new RegExp(`href="/crags/${cragSlug}/routes/([^"]+)"`);
   const sectorHref = new RegExp(
-    `<td class="stxt hidden-xs">\\s*<a href="/crags/${area}/topos/([^"]+)">([^<]+)</a>`
+    `<td class="stxt hidden-xs">\\s*<a href="/crags/${cragSlug}/topos/([^"]+)">([^<]+)</a>`
   );
   for (const r of rows) {
     const slugM = r.match(routeHref);
@@ -121,7 +129,7 @@ function parseRoutes(html, area) {
 
     routes.push({
       slug: slugM[1],
-      area,
+      area: areaSlug,
       name: nameM ? decode(stripTags(nameM[1])) : slugM[1],
       grade: gradeM ? gradeM[1].trim() : null,
       gradeNum: gradeNumM ? parseInt(gradeNumM[1], 10) : null,
@@ -133,7 +141,7 @@ function parseRoutes(html, area) {
       sector: sectorM ? decode(stripTags(sectorM[2])) : null,
       thumb: thumbM ? thumbM[1] : null,
       hasVideo,
-      url: ROUTE_URL(area, slugM[1]),
+      url: ROUTE_URL(cragSlug, slugM[1]),
     });
   }
   return routes;
@@ -185,19 +193,18 @@ async function resolveHighResImages(routes) {
   console.log(`  resolved ${resolved}/${routes.length} high-res images`);
 }
 
-async function scrapeArea(area) {
-  console.log(`\n=== ${area.name} (${area.slug}) ===`);
-  console.log('Fetching cragmap (sector GPS)…');
-  const cragmapHtml = await fetchText(CRAGMAP_URL(area.slug));
-  const { crag, sectors } = parseSectors(cragmapHtml, area.slug);
-  console.log(`  found ${Object.keys(sectors).length} sectors`);
+// Scrape a single 27crags crag: its sectors (with GPS) and its boulders, with
+// GPS joined onto each boulder via its sector. Boulders/sectors are tagged with
+// the owning app area so several crags can be merged into one area later.
+async function scrapeCrag(cragSlug, areaSlug) {
+  console.log(`  crag ${cragSlug}: fetching cragmap + routelist…`);
+  const cragmapHtml = await fetchText(CRAGMAP_URL(cragSlug));
+  const { crag, sectors } = parseSectors(cragmapHtml, cragSlug, areaSlug);
 
-  console.log('Fetching routelist (boulders)…');
-  const routelistHtml = await fetchText(ROUTELIST_URL(area.slug));
-  const routes = parseRoutes(routelistHtml, area.slug);
-  console.log(`  found ${routes.length} boulders`);
+  const routelistHtml = await fetchText(ROUTELIST_URL(cragSlug));
+  const routes = parseRoutes(routelistHtml, cragSlug, areaSlug);
 
-  // Join GPS coordinates onto each boulder via its sector (within this area).
+  // Join GPS coordinates onto each boulder via its sector (within this crag).
   let withGps = 0;
   for (const route of routes) {
     const sec = route.sectorSlug ? sectors[route.sectorSlug] : null;
@@ -210,7 +217,6 @@ async function scrapeArea(area) {
       route.lng = null;
     }
   }
-  console.log(`  ${withGps}/${routes.length} boulders have GPS via sector`);
 
   // Only keep sectors that actually contain boulders, for the map.
   const usedSlugs = new Set(routes.map((r) => r.sectorSlug).filter(Boolean));
@@ -221,12 +227,40 @@ async function scrapeArea(area) {
       count: routes.filter((r) => r.sectorSlug === s.slug).length,
     }));
 
+  console.log(
+    `    ${routes.length} boulders (${withGps} with GPS), ${usedSectors.length} sectors`
+  );
+  return { crag, routes, sectors: usedSectors };
+}
+
+async function scrapeArea(area) {
+  console.log(`\n=== ${area.name} (${area.slug}) — ${area.crags.join(', ')} ===`);
+
+  const routes = [];
+  const sectors = [];
+  const crags = [];
+  for (const cragSlug of area.crags) {
+    const res = await scrapeCrag(cragSlug, area.slug);
+    routes.push(...res.routes);
+    sectors.push(...res.sectors);
+    crags.push(res.crag);
+  }
+
+  // Centre the area on its crags. With a single crag this is exactly that
+  // crag's curated map centre/zoom (so existing areas stay byte-identical);
+  // with several, use their centroid and the widest (smallest) zoom so the
+  // default view spans the whole area.
+  const lat = crags.reduce((s, c) => s + c.lat, 0) / crags.length;
+  const lng = crags.reduce((s, c) => s + c.lng, 0) / crags.length;
+  const zoom = Math.min(...crags.map((c) => c.zoom));
+
+  console.log(`  area total: ${routes.length} boulders, ${sectors.length} sectors`);
   return {
-    // Use our own short display name (e.g. "Chironico", not the crag's
-    // "Chironico North") but keep the crag's map centre + zoom.
-    area: { slug: area.slug, ...crag, name: area.name, count: routes.length },
+    // Use our own short display name (e.g. "Gottardo") with a map centre that
+    // covers all of the area's crags.
+    area: { slug: area.slug, name: area.name, lat, lng, zoom, count: routes.length },
     routes,
-    sectors: usedSectors,
+    sectors,
   };
 }
 

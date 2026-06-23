@@ -115,7 +115,8 @@ function compare(a: Boulder, b: Boulder, sort: SortKey): number {
     case 'name':
       return a.name.localeCompare(b.name);
     case 'area':
-      // Magic Wood → Chironico → Cresciano, then best-rated within each area.
+      // Magic Wood → Chironico → Cresciano → Gottardo, then best-rated within
+      // each area.
       return (
         areaRank(a.area) - areaRank(b.area) ||
         b.rating - a.rating ||
