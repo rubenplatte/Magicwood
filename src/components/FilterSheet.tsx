@@ -16,6 +16,10 @@ const SORTS: { key: SortKey; label: string }[] = [
   { key: 'name', label: 'Name' },
 ];
 
+// The minimum-sends control runs 0–250; the top of the range means "250+".
+const MAX_SENDS = 250;
+const clampSends = (n: number) => Math.min(MAX_SENDS, Math.max(0, Math.round(n)));
+
 const SAVED_TOGGLES: { key: 'savedOnly' | 'likedOnly' | 'projectsOnly' | 'tickedOnly' | 'untickedOnly'; label: string }[] = [
   { key: 'savedOnly', label: 'Saved' },
   { key: 'likedOnly', label: 'Liked' },
@@ -43,6 +47,10 @@ export function FilterSheet() {
   }, [filters.maxGrade]);
 
   const lastIdx = gradeScale.length - 1;
+
+  // The slider tops out at 250; clamp so an exact entry above that still pins
+  // the thumb to the end.
+  const sendsValue = Math.min(filters.minAscents, MAX_SENDS);
 
   const setMinIdx = (i: number) => {
     const clamped = Math.min(i, maxIdx);
@@ -178,22 +186,44 @@ export function FilterSheet() {
         </div>
       </Section>
 
-      {/* Min ascents (popularity) */}
+      {/* Min ascents (popularity) — slider plus an exact number input,
+          both capped at 250 (treated as "250+"). */}
       <Section title="Minimum sends">
-        <div className="flex items-center gap-2 flex-wrap">
-          {[0, 10, 25, 50, 100, 250].map((n) => (
-            <button
-              key={n}
-              onClick={() => set({ minAscents: n })}
-              className={`px-3 py-1.5 rounded-full text-sm ${
-                filters.minAscents === n
-                  ? 'bg-moss-500 text-white'
-                  : 'bg-slate-800 text-slate-300'
-              }`}
-            >
-              {n === 0 ? 'Any' : `${n}+`}
-            </button>
-          ))}
+        <div className="flex items-center gap-3 mb-2">
+          <input
+            type="number"
+            inputMode="numeric"
+            min={0}
+            max={MAX_SENDS}
+            value={filters.minAscents}
+            onChange={(e) => {
+              const n = e.target.value === '' ? 0 : parseInt(e.target.value, 10);
+              set({ minAscents: clampSends(Number.isNaN(n) ? 0 : n) });
+            }}
+            aria-label="Minimum sends"
+            className="w-20 px-2 py-1.5 rounded-lg bg-slate-800 text-slate-100 text-sm text-center tabular-nums border border-slate-700 focus:outline-none focus:ring-2 focus:ring-moss-500"
+          />
+          <span className="text-sm text-slate-400">
+            {filters.minAscents === 0
+              ? 'Any number of sends'
+              : `${filters.minAscents}+ sends`}
+          </span>
+        </div>
+        <div className="dual-range">
+          <div className="rail" />
+          <div
+            className="fill"
+            style={{ left: 0, right: `${100 - (sendsValue / MAX_SENDS) * 100}%` }}
+          />
+          <input
+            type="range"
+            min={0}
+            max={MAX_SENDS}
+            step={5}
+            value={sendsValue}
+            aria-label="Minimum sends slider"
+            onChange={(e) => set({ minAscents: +e.target.value })}
+          />
         </div>
       </Section>
 
